@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Dict, List, Union
 
 from fastapi import FastAPI
 from pydantic import BaseModel, EmailStr
@@ -42,7 +42,7 @@ async def create_user(user_in: UserIn):
     return user_saved
 
 
-# aaa
+# response_modelの型指定
 class BaseItem(BaseModel):
     description: str
     type: str
@@ -67,6 +67,30 @@ items = {
 }
 
 
+# response_modelにUnionを使用する
 @app.get("/items/{item_id}", response_model=Union[PlaneItem, CarItem])
 async def read_item(item_id: str):
     return items[item_id]
+
+
+class Item(BaseModel):
+    name: str
+    description: str
+
+
+items = [
+    {"name": "Foo", "description": "There comes my hero"},
+    {"name": "Red", "description": "It's my aeroplane"},
+]
+
+
+# response_modelにListを使用する
+@app.get("/items/", response_model=List[Item])
+async def read_items():
+    return items
+
+
+# response_modelにDictを使用する
+@app.get("/keyword-weights/", response_model=Dict[str, float])
+async def read_keyword_weights():
+    return {"foo": 2.3, "bar": 3.4}
