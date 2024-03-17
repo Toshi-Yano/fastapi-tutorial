@@ -1,72 +1,33 @@
-from typing import Union
+from typing import Annotated
 
-from fastapi import FastAPI
-from pydantic import BaseModel, EmailStr
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import HTMLResponse
 
 app = FastAPI()
 
 
-# 複数モデルによる値の取り回し
-class UserBase(BaseModel):
-    username: str
-    email: EmailStr
-    full_name: str | None = None
+@app.post("/files/")
+async def create_files(files: Annotated[list[bytes], File()]):
+    return {"file_sizes": [len(file) for file in files]}
 
 
-class UserIn(UserBase):
-    password: str
+@app.post("/uploadfiles/")
+async def create_upload_files(files: list[UploadFile]):
+    return {"filenames": [file.filename for file in files]}
 
 
-class UserOut(UserBase):
-    pass
-
-
-class UserInDB(UserBase):
-    hashed_password: str
-
-
-def fake_password_hasher(raw_password: str):
-    return "supersecret" + raw_password
-
-
-def fake_save_user(user_in: UserIn):
-    hashed_password = fake_password_hasher(user_in.password)
-    user_in_db = UserInDB(**user_in.model_dump(), hashed_password=hashed_password)
-    print("User saved! ..not really")
-    return user_in_db
-
-
-@app.post("/user/", response_model=UserOut)
-async def create_user(user_in: UserIn):
-    user_saved = fake_save_user(user_in)
-    return user_saved
-
-
-# aaa
-class BaseItem(BaseModel):
-    description: str
-    type: str
-
-
-class CarItem(BaseItem):
-    type: str = "car"
-
-
-class PlaneItem(BaseItem):
-    type: str = "plane"
-    size: int
-
-
-items = {
-    "item1": {"description": "All my friends drive a low rider", "type": "car"},
-    "item2": {
-        "description": "Music is my aeroplane, it's my aeroplane",
-        "type": "plane",
-        "size": 5,
-    },
-}
-
-
-@app.get("/items/{item_id}", response_model=Union[PlaneItem, CarItem])
-async def read_item(item_id: str):
-    return items[item_id]
+@app.get("/")
+async def main():
+    content = """
+<body>
+<form action="/files/" enctype="multipart/form-data" method="post">
+<input name="files" type="file" multiple>
+<input type="submit">
+</form>
+<form action="/uploadfiles/" enctype="multipart/form-data" method="post">
+<input name="files" type="file" multiple>
+<input type="submit">
+</form>
+</body>
+    """
+    return HTMLResponse(content=content)
